@@ -415,6 +415,19 @@ body.app #results .bars{margin-top:14px}
       </div>
     </div>
   </div>
+  <div class="panel reveal" id="refundForm" data-roles="customer" style="margin-top:18px">
+    <h3 style="font-size:20px;letter-spacing:-.02em;margin-bottom:4px">Prefer a form?</h3>
+    <p style="color:var(--muted);font-size:14px">Submit a refund request for the order selected above. Our agent processes it automatically, and you can follow it in My history.</p>
+    <div class="row" style="grid-template-columns:1fr 2fr">
+      <div><label>Reason</label>
+        <select id="rf_reason" style="width:100%;font:inherit;font-size:15px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:#f5f5f7">
+          <option>Arrived damaged or defective</option><option>Wrong item delivered</option><option>Part or accessory missing</option>
+          <option>Changed my mind (unused)</option><option>Wrong size</option><option>Never arrived</option><option>Other</option></select></div>
+      <div><label>Details</label><input id="rf_details" placeholder="Tell us what happened" maxlength="600"></div>
+    </div>
+    <div class="toggle"><input type="checkbox" id="rf_photo"><span>Photo attached</span></div>
+    <button class="btn primary" id="rf_send" style="margin-top:14px">Submit refund request</button>
+  </div>
 </div></section>
 
 <section class="dark" id="queue" data-roles="staff"><div class="wrap">
@@ -809,6 +822,22 @@ async function sendChat(){
 $("#c_send").onclick = sendChat;
 $("#c_input").onkeydown = e => { if(e.key==="Enter") sendChat(); };
 loadOrderList();
+
+/* customer refund form -> inbox -> autopilot */
+$("#rf_send").onclick = async () => {
+  if(!auth.token){ openLogin("customer"); return; }
+  const [customer_id, order_id] = ($("#c_order").value||"|").split("|");
+  if(!order_id){ toast("Pick your order first"); return; }
+  const details = $("#rf_details").value.trim();
+  const message = $("#rf_reason").value + (details ? ". " + details : "");
+  const r = await fetch("/api/inbox",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({customer_id, order_id, message, photo_attached:$("#rf_photo").checked})});
+  if(!r.ok) return;
+  const d = await r.json();
+  $("#rf_details").value = ""; $("#rf_photo").checked = false;
+  toast(`Request ${d.ticket_id} submitted. Our agent is processing it; see My history for the result`);
+  setTimeout(loadMemory, 4000); setTimeout(loadMemory, 15000); setTimeout(loadMemory, 40000);
+};
 $("#resetBtn").onclick = async e => { e.preventDefault(); if(!isStaff()) return; if(!confirm("Reset all demo data?")) return;
   await fetch("/api/reset",{method:"POST"}); $("#trace").innerHTML='<div class="empty">The agent\'s reasoning will appear here, step by step.</div>';
   loadQueue(); loadMemory(); pollAP(); loadOrderList(); resetChat(); toast("Demo data reset"); };
