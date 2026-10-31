@@ -10,7 +10,8 @@ from datetime import datetime
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from fastapi import HTTPException
+from pydantic import BaseModel, Field
 
 from agent import human_review, run_ticket
 from config import BASE_DIR, DB_PATH
@@ -94,6 +95,20 @@ def rows(sql, args=()):
     return out
 
 
+def unique_ticket_id(tid: str) -> str:
+    """Never reuse a ticket id: a repeat gets -2, -3 ... so no ticket overwrites another in memory."""
+    base = (tid or "").strip() or f"W{datetime.now().strftime('%H%M%S')}"
+    con = sqlite3.connect(DB_PATH)
+    def taken(t):
+        return con.execute("SELECT 1 FROM tickets WHERE ticket_id=? UNION SELECT 1 FROM inbox WHERE ticket_id=?",
+                           (t, t)).fetchone() is not None
+    cand, k = base, 2
+    while taken(cand):
+        cand, k = f"{base}-{k}", k + 1
+    con.close()
+    return cand
+
+
 @app.get("/")
 def index():
     return FileResponse(BASE_DIR / "static" / "index.html")
@@ -120,7 +135,10 @@ def run(t: Ticket):
 
     def work():
         try:
-            res = run_ticket(t.model_dump(), on_step=lambda s: q.put(s))
+            ticket = t.model_dump()
+            ticket["ticket_id"] = unique_ticket_id(ticket["ticket_id"])
+            q.put({"type": "ticket_id", "ticket_id": ticket["ticket_id"]})
+            res = run_ticket(ticket, on_step=lambda s: q.put(s))
             q.put({"type": "done", "final": res["final"], "proposal": res["proposal"],
                    "llm_calls": res["llm_calls"], "tool_calls": res["tool_calls"]})
         except Exception as e:
@@ -139,14 +157,19 @@ def run(t: Ticket):
     return StreamingResponse(stream(), media_type="application/x-ndjson")
 
 
+CATEGORIES = {"electronics", "apparel", "footwear", "accessories", "home_appliance", "home_decor",
+              "kitchen", "furniture", "fitness", "innerwear", "grocery"}
+MAX_CUSTOM_ORDERS = 300
+
+
 class NewOrder(BaseModel):
-    customer_name: str
-    item: str
+    customer_name: str = Field(min_length=1, max_length=40)
+    item: str = Field(min_length=1, max_length=60)
     category: str = "electronics"
-    price: float
-    delivered_days_ago: int = 3
+    price: float = Field(gt=0, le=1_000_000)          # Rs 1 to Rs 10 lakh
+    delivered_days_ago: int = Field(default=3, ge=0, le=365)
     in_transit: bool = False
-    serial_number: str | None = None
+    serial_number: str | None = Field(default=None, max_length=30)
 
 
 @app.post("/api/orders")
@@ -154,8 +177,17 @@ def create_order(o: NewOrder):
     """Lets anyone add their own customer + order to the demo database, then test the agent on it."""
     from datetime import timedelta
     from config import TODAY
+    from guardrails import detect_injection
+    if o.category not in CATEGORIES:
+        raise HTTPException(400, "Unknown category")
+    for field in (o.customer_name, o.item, o.serial_number or ""):
+        if detect_injection(field) or any(ch in field for ch in "<>{}`"):
+            raise HTTPException(400, "That text isn't allowed in an order field")
     con = sqlite3.connect(DB_PATH)
     n = con.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    if n >= MAX_CUSTOM_ORDERS:
+        con.close()
+        raise HTTPException(429, "Demo order limit reached. Use Reset demo to clear it")
     k = 5001 + n
     while con.execute("SELECT 1 FROM orders WHERE order_id = ?", (f"O{k}",)).fetchone() or \
             con.execute("SELECT 1 FROM customers WHERE customer_id = ?", (f"C{k}",)).fetchone():
@@ -233,7 +265,7 @@ def _enqueue(t: dict):
 def submit(t: InboxTicket):
     """A customer submits a ticket. The autopilot picks it up automatically."""
     d = t.model_dump()
-    d["ticket_id"] = d["ticket_id"] or f"W{datetime.now().strftime('%H%M%S')}"
+    d["ticket_id"] = unique_ticket_id(d["ticket_id"])
     _enqueue(d)
     return {"ok": True, "ticket_id": d["ticket_id"]}
 
@@ -241,6 +273,8 @@ def submit(t: InboxTicket):
 @app.post("/api/inbox/samples")
 def load_samples():
     for t in json.loads((BASE_DIR / "data" / "eval_set.json").read_text()):
+        t = dict(t)
+        t["ticket_id"] = unique_ticket_id(t["ticket_id"])
         _enqueue(t)
     return {"ok": True}
 
