@@ -412,12 +412,23 @@ def run_ticket(ticket: dict, on_step=None) -> dict:
 
     trace, tool_errors, proposal, llm_calls = [], [], None, 0
     obs = {"_photo_attached": bool(ticket.get("photo_attached"))}
-    try:
-        runner = _run_groq if LLM_PROVIDER == "groq" else _run_gemini
-        proposal, llm_calls = runner(ticket, log, tool_errors, obs)
-    except Exception as e:
-        log({"type": "error", "text": f"Agent error: {type(e).__name__}: {e}"})
-        tool_errors.append(f"agent: {e}")
+    order = [_run_groq, _run_gemini] if LLM_PROVIDER == "groq" else [_run_gemini, _run_groq]
+    available = [r for r in order if (r is _run_groq and GROQ_API_KEY) or (r is _run_gemini and GEMINI_API_KEY and genai)]
+    for i, runner in enumerate(available or order[:1]):
+        errors_before, trace_before = len(tool_errors), len(trace)
+        try:
+            proposal, llm_calls = runner(ticket, log, tool_errors, obs)
+            break
+        except Exception as e:
+            msg = f"{type(e).__name__}: {e}"
+            if i + 1 < len(available):
+                # LLM provider down or out of quota: switch provider and start the ticket again
+                del tool_errors[errors_before:]
+                name = "Gemini" if available[i + 1] is _run_gemini else "Groq"
+                log({"type": "thought", "text": f"AI provider unavailable ({msg[:90]}). Switching to {name}."})
+                continue
+            log({"type": "error", "text": f"Agent error: {msg}"})
+            tool_errors.append(f"agent: {e}")
 
     final = apply_guardrails(ticket, proposal, tool_errors)
     log({"type": "guardrail", "final": final})
