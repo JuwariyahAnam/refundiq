@@ -1,6 +1,7 @@
 """Web server for the custom frontend.
 Run:  python server.py   then open http://localhost:8000"""
 import json
+import re
 import queue
 import sqlite3
 import threading
@@ -347,6 +348,11 @@ class NewOrder(BaseModel):
     delivered_days_ago: int = Field(default=3, ge=0, le=365)
     in_transit: bool = False
     serial_number: str | None = Field(default=None, max_length=30)
+    customer_id: str | None = Field(default=None, max_length=20)   # optional: choose your own IDs
+    order_id: str | None = Field(default=None, max_length=20)
+
+
+ID_PATTERN = re.compile(r"^[A-Z0-9][A-Z0-9-]{1,19}$")
 
 
 @app.post("/api/orders")
@@ -361,23 +367,34 @@ def create_order(o: NewOrder, request: Request):
     for field in (o.customer_name, o.item, o.serial_number or ""):
         if detect_injection(field) or any(ch in field for ch in "<>{}`"):
             raise HTTPException(400, "That text isn't allowed in an order field")
+    want_c = (o.customer_id or "").strip().upper()
+    want_o = (o.order_id or "").strip().upper()
+    for v, label in ((want_c, "Customer ID"), (want_o, "Order ID")):
+        if v and not ID_PATTERN.match(v):
+            raise HTTPException(400, f"{label} can use letters, numbers and dashes only (2-20 characters)")
     con = sqlite3.connect(DB_PATH)
     n = con.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
     if n >= MAX_CUSTOM_ORDERS:
         con.close()
         raise HTTPException(429, "Demo order limit reached. Use Reset demo to clear it")
+    if want_o and con.execute("SELECT 1 FROM orders WHERE order_id = ?", (want_o,)).fetchone():
+        con.close()
+        raise HTTPException(409, f"Order ID {want_o} already exists. Choose another one")
     k = 5001 + n
     while con.execute("SELECT 1 FROM orders WHERE order_id = ?", (f"O{k}",)).fetchone() or \
-            con.execute("SELECT 1 FROM customers WHERE customer_id = ?", (f"C{k}",)).fetchone():
+            con.execute("SELECT 1 FROM customers WHERE customer_id = ?", (f"C{k}",)).fetchone() or \
+            con.execute("SELECT 1 FROM shipments WHERE tracking_id = ?", (f"TRK{k}",)).fetchone():
         k += 1
-    cid, oid, trk = f"C{k}", f"O{k}", f"TRK{k}"
+    cid, oid, trk = want_c or f"C{k}", want_o or f"O{k}", f"TRK{k}"
+    existing = con.execute("SELECT name FROM customers WHERE customer_id = ?", (cid,)).fetchone()
     if o.in_transit:
         expected, delivered = (TODAY + timedelta(days=2)).isoformat(), None
         status = "IN_TRANSIT"
     else:
         expected = delivered = (TODAY - timedelta(days=max(0, o.delivered_days_ago))).isoformat()
         status = "DELIVERED"
-    con.execute("INSERT INTO customers VALUES (?,?)", (cid, o.customer_name.strip() or "Guest"))
+    if not existing:   # an existing customer ID keeps its name and simply gets another order
+        con.execute("INSERT INTO customers VALUES (?,?)", (cid, o.customer_name.strip() or "Guest"))
     con.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)",
                 (oid, cid, o.item.strip(), o.category, round(float(o.price), 2),
                  (TODAY - timedelta(days=max(0, o.delivered_days_ago) + 4)).isoformat(),
@@ -385,7 +402,8 @@ def create_order(o: NewOrder, request: Request):
     con.execute("INSERT INTO shipments VALUES (?,?,?,?,?)", (trk, status, expected, delivered, None))
     con.commit()
     con.close()
-    return {"customer_id": cid, "order_id": oid, "tracking_id": trk, "orders_in_db": n + 1}
+    return {"customer_id": cid, "order_id": oid, "tracking_id": trk, "orders_in_db": n + 1,
+            "existing_customer": bool(existing)}
 
 
 @app.get("/api/queue")

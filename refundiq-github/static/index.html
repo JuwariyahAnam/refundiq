@@ -357,6 +357,8 @@ footer{padding:50px 0;color:var(--muted);font-size:13px;text-align:center}
       <div class="toggle"><input type="checkbox" id="f_photo"><span>Photo attached</span></div>
       <details class="own"><summary>➕ Use your own order</summary>
         <div class="g2">
+          <div><label>Customer ID (optional)</label><input id="o_cid" placeholder="auto, e.g. ANAM01" maxlength="20"></div>
+          <div><label>Order ID (optional)</label><input id="o_oid" placeholder="auto, e.g. ORD-777" maxlength="20"></div>
           <div><label>Your name</label><input id="o_name" value="Test Customer"></div>
           <div><label>Item</label><input id="o_item" value="Wireless mouse"></div>
           <div><label>Category</label><select id="o_cat">
@@ -588,7 +590,8 @@ $("#o_create").onclick = async () => {
   if(!isStaff()){ toast("Support staff only"); openLogin("staff"); return; }
   const body = {customer_name:$("#o_name").value, item:$("#o_item").value, category:$("#o_cat").value,
     price:parseFloat($("#o_price").value||"0"), delivered_days_ago:parseInt($("#o_days").value||"0"),
-    in_transit:$("#o_transit").checked, serial_number:$("#o_serial").value.trim()||null};
+    in_transit:$("#o_transit").checked, serial_number:$("#o_serial").value.trim()||null,
+    customer_id:$("#o_cid").value.trim()||null, order_id:$("#o_oid").value.trim()||null};
   if(!body.item.trim() || !(body.price>0)){ toast("Enter an item and a price"); return; }
   try{
     const res = await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
@@ -599,7 +602,8 @@ $("#o_create").onclick = async () => {
     $("#f_serial").value = ""; $("#f_photo").checked = false;
     $("#f_msg").value = ""; $("#f_msg").placeholder = "Now describe the problem in your own words...";
     $("#expect").innerHTML = ""; $("#f_msg").focus();
-    toast(`Order ${d.order_id} created for ${body.customer_name}. Write a message and run the agent`);
+    toast(`Order ${d.order_id} created for customer ${d.customer_id}${d.existing_customer?" (existing customer)":""}. They can sign in with ${d.customer_id} + ${d.order_id}`);
+    $("#o_cid").value = ""; $("#o_oid").value = "";
     loadOrderList(true);
   }catch(e){ toast("Could not create the order"); }
 };
