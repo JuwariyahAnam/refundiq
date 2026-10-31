@@ -210,6 +210,11 @@ footer{padding:50px 0;color:var(--muted);font-size:13px;text-align:center}
 .meter i{display:block;height:100%;border-radius:99px;background:#fff;width:0;transition:width 1.2s var(--ease)}
 .sig{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
 .ev{display:flex;gap:8px;padding:3px 0;align-items:baseline}
+
+.own{margin-top:18px;border:1px dashed var(--line);border-radius:14px;padding:14px}
+.own summary{cursor:pointer;font-weight:600;font-size:15px}
+.own .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.own select{width:100%;font:inherit;font-size:15px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:#f5f5f7}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:14px;transition:transform .5s var(--ease);z-index:99;font-size:14px}
 .toast.show{transform:translateX(-50%) translateY(0)}
 </style>
@@ -321,6 +326,21 @@ footer{padding:50px 0;color:var(--muted);font-size:13px;text-align:center}
       <label>Serial number</label><input id="f_serial" placeholder="optional">
       <label>Customer message</label><textarea id="f_msg"></textarea>
       <div class="toggle"><input type="checkbox" id="f_photo"><span>Photo attached</span></div>
+      <details class="own"><summary>➕ Use your own order</summary>
+        <div class="g2">
+          <div><label>Your name</label><input id="o_name" value="Test Customer"></div>
+          <div><label>Item</label><input id="o_item" value="Wireless mouse"></div>
+          <div><label>Category</label><select id="o_cat">
+            <option>electronics</option><option>apparel</option><option>footwear</option><option>accessories</option>
+            <option>home_appliance</option><option>home_decor</option><option>kitchen</option><option>furniture</option>
+            <option>fitness</option><option>innerwear</option><option>grocery</option></select></div>
+          <div><label>Price (Rs)</label><input id="o_price" type="number" value="1200"></div>
+          <div><label>Delivered how many days ago</label><input id="o_days" type="number" value="3"></div>
+          <div><label>Serial number on record</label><input id="o_serial" placeholder="optional"></div>
+        </div>
+        <div class="toggle"><input type="checkbox" id="o_transit"><span>Not delivered yet (in transit)</span></div>
+        <button class="btn dk" id="o_create" style="margin-top:12px;background:var(--ink);color:#fff">Create order and fill the ticket</button>
+      </details>
       <button class="btn primary run" id="runBtn">Run agent</button>
       <div class="expect" id="expect"></div>
     </div>
@@ -468,6 +488,23 @@ $("#runBtn").onclick = async () => {
     loadQueue(); loadMemory();
   }catch(e){ toast("Could not reach the server"); }
   btn.disabled=false; btn.textContent="Run agent";
+};
+
+/* own order */
+$("#o_create").onclick = async () => {
+  const body = {customer_name:$("#o_name").value, item:$("#o_item").value, category:$("#o_cat").value,
+    price:parseFloat($("#o_price").value||"0"), delivered_days_ago:parseInt($("#o_days").value||"0"),
+    in_transit:$("#o_transit").checked, serial_number:$("#o_serial").value.trim()||null};
+  if(!body.item.trim() || !(body.price>0)){ toast("Enter an item and a price"); return; }
+  try{
+    const d = await (await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
+    document.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
+    $("#f_ticket").value = "T" + d.order_id.slice(1); $("#f_cust").value = d.customer_id; $("#f_order").value = d.order_id;
+    $("#f_serial").value = ""; $("#f_photo").checked = false;
+    $("#f_msg").value = ""; $("#f_msg").placeholder = "Now describe the problem in your own words...";
+    $("#expect").innerHTML = ""; $("#f_msg").focus();
+    toast(`Order ${d.order_id} created for ${body.customer_name}. Write a message and run the agent`);
+  }catch(e){ toast("Could not create the order"); }
 };
 
 /* approval queue */
