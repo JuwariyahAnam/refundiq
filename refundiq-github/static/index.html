@@ -416,9 +416,10 @@ body.app #results .bars{margin-top:14px}
     </div>
   </div>
   <div class="panel reveal" id="refundForm" data-roles="customer" style="margin-top:18px">
-    <h3 style="font-size:20px;letter-spacing:-.02em;margin-bottom:4px">Prefer a form?</h3>
-    <p style="color:var(--muted);font-size:14px">Submit a refund request for the order selected above. Our agent processes it automatically, and you can follow it in My history.</p>
-    <div class="row" style="grid-template-columns:1fr 2fr">
+    <h3 style="font-size:20px;letter-spacing:-.02em;margin-bottom:4px">Or use the refund form</h3>
+    <p style="color:var(--muted);font-size:14px">Enter your order ID and what happened. Our AI agent checks the order, delivery and policy, then approves or rejects your request right here.</p>
+    <div class="row" style="grid-template-columns:1fr 1fr 2fr">
+      <div><label>Order ID</label><input id="rf_order" placeholder="e.g. O1003" maxlength="20"></div>
       <div><label>Reason</label>
         <select id="rf_reason" style="width:100%;font:inherit;font-size:15px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:#f5f5f7">
           <option>Arrived damaged or defective</option><option>Wrong item delivered</option><option>Part or accessory missing</option>
@@ -427,6 +428,7 @@ body.app #results .bars{margin-top:14px}
     </div>
     <div class="toggle"><input type="checkbox" id="rf_photo"><span>Photo attached</span></div>
     <button class="btn primary" id="rf_send" style="margin-top:14px">Submit refund request</button>
+    <div id="rf_result" style="margin-top:16px"></div>
   </div>
 </div></section>
 
@@ -758,6 +760,7 @@ async function loadOrderList(keep){
     const sel = $("#c_order"), prev = sel.value;
     sel.innerHTML = list.map(o=>`<option value="${esc(o.customer_id)}|${esc(o.order_id)}">${esc(o.name)} · ${esc(o.item)} · ${inr(o.price)} (${esc(o.order_id)})</option>`).join("");
     if(keep && prev) sel.value = prev;
+    const first = (sel.value||"|").split("|")[1]; if(first && $("#rf_order") && !$("#rf_order").value) $("#rf_order").value = first;
   }catch(e){}
 }
 function resetChat(){
@@ -823,20 +826,46 @@ $("#c_send").onclick = sendChat;
 $("#c_input").onkeydown = e => { if(e.key==="Enter") sendChat(); };
 loadOrderList();
 
-/* customer refund form -> inbox -> autopilot */
+/* customer refund form: the agent checks and decides right away */
+$("#c_order").addEventListener("change", () => { const v = ($("#c_order").value||"|").split("|")[1]; if(v) $("#rf_order").value = v; });
 $("#rf_send").onclick = async () => {
   if(!auth.token){ openLogin("customer"); return; }
-  const [customer_id, order_id] = ($("#c_order").value||"|").split("|");
-  if(!order_id){ toast("Pick your order first"); return; }
+  const order_id = $("#rf_order").value.trim().toUpperCase();
+  if(!order_id){ toast("Enter your order ID"); return; }
+  const customer_id = auth.role==="customer" ? auth.customer_id : ($("#c_order").value||"|").split("|")[0];
   const details = $("#rf_details").value.trim();
-  const message = $("#rf_reason").value + (details ? ". " + details : "");
-  const r = await fetch("/api/inbox",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({customer_id, order_id, message, photo_attached:$("#rf_photo").checked})});
-  if(!r.ok) return;
-  const d = await r.json();
+  const message = "Refund request. Reason: " + $("#rf_reason").value + (details ? ". What happened: " + details : "");
+  const btn = $("#rf_send"), out = $("#rf_result");
+  btn.disabled = true; btn.textContent = "Agent is checking…";
+  out.innerHTML = '<div class="status"><div class="thinking" style="padding:0"><i></i><i></i><i></i></div><span>Looking into your order…</span></div>';
+  let done = null;
+  try{
+    const res = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({customer_id, order_id, message, photo_attached:$("#rf_photo").checked, history:[]})});
+    if(!res.ok){
+      out.innerHTML = `<p style="color:var(--red)">${res.status===403 ? "That order ID isn't linked to your account." : "Please check the order ID and try again."}</p>`;
+      btn.disabled = false; btn.textContent = "Submit refund request"; return;
+    }
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf = "";
+    while(true){
+      const {done:fin, value} = await reader.read(); if(fin) break;
+      buf += dec.decode(value,{stream:true}); let i;
+      while((i=buf.indexOf("\n"))>=0){
+        const line = buf.slice(0,i); buf = buf.slice(i+1); if(!line.trim()) continue;
+        const st = JSON.parse(line);
+        if(st.type==="done"){ done = st; continue; }
+        const x = describe(st); if(x){ const sp = out.querySelector("span"); if(sp) sp.textContent = x.t + "…"; }
+      }
+    }
+  }catch(e){ done = {reply:"Sorry, we couldn't reach the server. Please try again."}; }
+  const f = done && done.final;
+  out.innerHTML = f
+    ? `<div class="verdict v-${f.final_decision}" style="margin-top:0"><div class="big" style="font-size:28px">${NICE[f.final_decision]}</div>
+        ${f.refund_amount ? `<div class="amt">${inr(f.refund_amount)}</div>` : ""}<div class="meta">${esc(done.reply||"")}</div></div>`
+    : `<p>${esc((done&&done.reply)||"")}</p>`;
   $("#rf_details").value = ""; $("#rf_photo").checked = false;
-  toast(`Request ${d.ticket_id} submitted. Our agent is processing it; see My history for the result`);
-  setTimeout(loadMemory, 4000); setTimeout(loadMemory, 15000); setTimeout(loadMemory, 40000);
+  btn.disabled = false; btn.textContent = "Submit refund request";
+  loadMemory();
 };
 $("#resetBtn").onclick = async e => { e.preventDefault(); if(!isStaff()) return; if(!confirm("Reset all demo data?")) return;
   await fetch("/api/reset",{method:"POST"}); $("#trace").innerHTML='<div class="empty">The agent\'s reasoning will appear here, step by step.</div>';
