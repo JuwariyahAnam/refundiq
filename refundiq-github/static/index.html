@@ -482,7 +482,9 @@ $("#runBtn").onclick = async () => {
       buf += dec.decode(value,{stream:true}); let i;
       while((i=buf.indexOf("\n"))>=0){
         const line=buf.slice(0,i); buf=buf.slice(i+1); if(!line.trim()) continue;
-        const s=JSON.parse(line); if(s.type==="done") verdict(s); else addStep(s);
+        const s=JSON.parse(line);
+        if(s.type==="ticket_id"){ if(s.ticket_id!==body.ticket_id) toast(`Ticket ID ${body.ticket_id} was used before, saved as ${s.ticket_id}`); continue; }
+        if(s.type==="done") verdict(s); else addStep(s);
       }
     }
     loadQueue(); loadMemory();
@@ -497,7 +499,9 @@ $("#o_create").onclick = async () => {
     in_transit:$("#o_transit").checked, serial_number:$("#o_serial").value.trim()||null};
   if(!body.item.trim() || !(body.price>0)){ toast("Enter an item and a price"); return; }
   try{
-    const d = await (await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
+    const res = await fetch("/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const d = await res.json();
+    if(!res.ok){ const m = typeof d.detail==="string" ? d.detail : "Check the fields: price Rs 1 to 10 lakh, days 0-365, short text"; toast(m); return; }
     document.querySelectorAll(".chip").forEach(c=>c.classList.remove("sel"));
     $("#f_ticket").value = "T" + d.order_id.slice(1); $("#f_cust").value = d.customer_id; $("#f_order").value = d.order_id;
     $("#f_serial").value = ""; $("#f_photo").checked = false;
