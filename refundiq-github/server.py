@@ -139,6 +139,45 @@ def run(t: Ticket):
     return StreamingResponse(stream(), media_type="application/x-ndjson")
 
 
+class NewOrder(BaseModel):
+    customer_name: str
+    item: str
+    category: str = "electronics"
+    price: float
+    delivered_days_ago: int = 3
+    in_transit: bool = False
+    serial_number: str | None = None
+
+
+@app.post("/api/orders")
+def create_order(o: NewOrder):
+    """Lets anyone add their own customer + order to the demo database, then test the agent on it."""
+    from datetime import timedelta
+    from config import TODAY
+    con = sqlite3.connect(DB_PATH)
+    n = con.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    k = 5001 + n
+    while con.execute("SELECT 1 FROM orders WHERE order_id = ?", (f"O{k}",)).fetchone() or \
+            con.execute("SELECT 1 FROM customers WHERE customer_id = ?", (f"C{k}",)).fetchone():
+        k += 1
+    cid, oid, trk = f"C{k}", f"O{k}", f"TRK{k}"
+    if o.in_transit:
+        expected, delivered = (TODAY + timedelta(days=2)).isoformat(), None
+        status = "IN_TRANSIT"
+    else:
+        expected = delivered = (TODAY - timedelta(days=max(0, o.delivered_days_ago))).isoformat()
+        status = "DELIVERED"
+    con.execute("INSERT INTO customers VALUES (?,?)", (cid, o.customer_name.strip() or "Guest"))
+    con.execute("INSERT INTO orders VALUES (?,?,?,?,?,?,?,?,?)",
+                (oid, cid, o.item.strip(), o.category, round(float(o.price), 2),
+                 (TODAY - timedelta(days=max(0, o.delivered_days_ago) + 4)).isoformat(),
+                 (o.serial_number or "").strip() or None, "", trk))
+    con.execute("INSERT INTO shipments VALUES (?,?,?,?,?)", (trk, status, expected, delivered, None))
+    con.commit()
+    con.close()
+    return {"customer_id": cid, "order_id": oid, "tracking_id": trk, "orders_in_db": n + 1}
+
+
 @app.get("/api/queue")
 def pending():
     return rows("SELECT ticket_id, customer_id, order_id, refund_amount, flags, reasoning, status, reviewer_note, reviewed_at "
