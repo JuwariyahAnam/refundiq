@@ -269,7 +269,7 @@ body.app #results .bars{margin-top:14px}
   <a class="logo" href="#top"><i></i>RefundIQ</a>
   <div class="links">
     <a href="#how" data-roles="guest">How it works</a><a href="#results" data-roles="guest">Results</a>
-    <a href="#chat" data-roles="customer">Chat</a><a href="#memory" data-roles="customer">My history</a>
+    <a href="#chat" data-roles="customer">Request a refund</a><a href="#memory" data-roles="customer">My history</a>
     <a href="#autopilot" data-roles="staff">Autopilot</a><a href="#live" data-roles="staff">Agent console</a><a href="#queue" data-roles="staff">Approvals</a><a href="#memory" data-roles="staff">Customers</a><a href="#results" data-roles="staff">Results</a>
     <a href="#" id="resetBtn" data-roles="staff" style="color:#ff9f0a">Reset demo</a></div>
   <div class="who" id="who"><button id="signin">Sign in</button></div>
@@ -284,7 +284,7 @@ body.app #results .bars{margin-top:14px}
       <p class="sub">An autonomous agent that checks the order, tracks the parcel, reads the policy, remembers every customer and knows exactly when to call a human.</p>
       <span data-roles="guest"><button class="btn primary" onclick="openLogin('customer')">I'm a customer</button>
       <button class="btn ghost" onclick="openLogin('staff')">Support staff sign in ›</button></span>
-      <span data-roles="customer"><a class="btn primary" href="#chat">Start a chat</a>
+      <span data-roles="customer"><a class="btn primary" href="#chat">Request a refund</a>
       <a class="btn ghost" href="#memory">My history ›</a></span>
       <span data-roles="staff"><a class="btn primary" href="#autopilot">Open autopilot</a>
       <a class="btn ghost" href="#queue">Review approvals ›</a></span>
@@ -400,13 +400,14 @@ body.app #results .bars{margin-top:14px}
       <label>Serial number (optional)</label><input id="c_serial" placeholder="e.g. PB-44120">
       <button class="btn ghost" id="c_new" style="padding-left:0;margin-top:10px">Start a new conversation</button>
       <div class="sugg" id="c_sugg">
+        <button>I'd like a refund for this order.</button>
         <button>My order arrived damaged, can I get a refund?</button>
         <button>I changed my mind, it's unused and still in the box.</button>
         <button>I've attached a photo of the problem now.</button>
       </div>
     </div>
     <div class="chatbox">
-      <div class="msgs" id="c_msgs"><div class="hint">Pick an order on the left, then say hello. Try one of the suggested messages to start.</div></div>
+      <div class="msgs" id="c_msgs"><div class="hint">Pick your order, then tell us what went wrong. Our agent checks your order and replies with a decision in seconds.</div></div>
       <div class="composer">
         <label class="attach"><input type="checkbox" id="c_photo"> Photo</label>
         <input type="text" id="c_input" placeholder="Type a message..." maxlength="1000">
@@ -748,7 +749,7 @@ async function loadOrderList(keep){
 }
 function resetChat(){
   chat.conv=null; chat.history=[]; $("#c_photo").checked=false;
-  $("#c_msgs").innerHTML='<div class="hint">New conversation. Say hello, or describe the problem with your order.</div>';
+  $("#c_msgs").innerHTML='<div class="hint">Pick your order, then tell us what went wrong. Our agent checks your order and replies with a decision in seconds.</div>';
 }
 $("#c_order").onchange = resetChat;
 $("#c_new").onclick = resetChat;
@@ -840,7 +841,7 @@ function showForRole(){
     el.style.display = el.dataset.roles.split(" ").includes(key) ? "" : "none";
   });
   document.body.classList.toggle("app", key !== "guest");
-  const titles = key === "guest" ? null : {autopilot:"Autopilot", live:"Agent console", queue:"Approvals", results:"Test results", chat:"Chat with us"};
+  const titles = key === "guest" ? null : {autopilot:"Autopilot", live:"Agent console", queue:"Approvals", results:"Test results", chat:"Request a refund"};
   if(titles) Object.entries(titles).forEach(([id,t]) => { const h = document.querySelector("#"+id+" .h2"); if(h){ h.dataset.full = h.dataset.full || h.innerHTML; h.textContent = t; } });
   else document.querySelectorAll(".h2[data-full]").forEach(h => h.innerHTML = h.dataset.full);
   const mh = $("#memory .h2"), ml = $("#memory .lead");
