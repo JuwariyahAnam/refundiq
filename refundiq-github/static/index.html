@@ -651,7 +651,10 @@ async function loadQueue(){
     let flags={}; try{flags=JSON.parse(r.flags||"{}")}catch(e){}
     const pending = r.status==="PENDING_HUMAN";
     return `<div class="qcard"><div class="top"><h4>${esc(r.ticket_id)} · ${esc(r.customer_id)}</h4><span class="pill p-${r.status}">${r.status.replace(/_/g," ")}</span></div>
-      <div class="money">${inr(r.refund_amount)}</div><div class="why">${esc(r.reasoning||"")}</div>
+      <div class="money">${inr(r.refund_amount)}</div>
+      <div class="why" style="min-height:0"><b style="color:#fff">Order:</b> ${esc(r.order_id)}</div>
+      <div class="why" style="min-height:0;margin-top:8px"><b style="color:#fff">Customer said:</b> ${esc(String(r.message||"").replace(/^Chat conversation so far:\s*/,"").slice(0,400))}</div>
+      <div class="why" style="min-height:0;margin-top:8px"><b style="color:#fff">Agent's reasoning:</b> ${esc(r.reasoning||"Agent could not reach a decision")}${r.clause_ids?` <span style="opacity:.8">(policy ${esc(r.clause_ids)})</span>`:""}</div>
       ${Object.keys(flags).map(k=>`<span class="flag">${esc(k.replace(/_/g," "))}</span>`).join("")}
       ${pending?`<input placeholder="Reviewer note" id="n_${esc(r.ticket_id)}"><div class="qbtns">
         <button class="ok" onclick="review('${esc(r.ticket_id)}',true)">Approve refund</button>

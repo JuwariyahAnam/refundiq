@@ -409,7 +409,8 @@ def create_order(o: NewOrder, request: Request):
 @app.get("/api/queue")
 def pending(request: Request):
     require(request, "staff")
-    return rows("SELECT ticket_id, customer_id, order_id, refund_amount, flags, reasoning, status, reviewer_note, reviewed_at "
+    return rows("SELECT ticket_id, customer_id, order_id, refund_amount, flags, reasoning, status, reviewer_note, reviewed_at, "
+                "message, clause_ids, decision "
                 "FROM tickets WHERE status IN ('PENDING_HUMAN','HUMAN_APPROVED','HUMAN_REJECTED') "
                 "ORDER BY status DESC, ticket_id")
 
