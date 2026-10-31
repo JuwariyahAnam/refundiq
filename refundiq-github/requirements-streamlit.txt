@@ -1,0 +1,3 @@
+# Only needed for the backup Streamlit UI (app.py)
+streamlit
+pandas

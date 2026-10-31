@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RefundIQ — Agentic Returns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#fbfbfd; --ink:#1d1d1f; --muted:#6e6e73; --line:#e5e5ea; --card:#ffffff;
+  --dark:#000; --dark2:#101012; --dark3:#1c1c1e; --dink:#f5f5f7; --dmuted:#a1a1a6;
+  --blue:#0071e3; --green:#30d158; --teal:#40c8e0; --orange:#ff9f0a; --red:#ff453a; --purple:#bf5af2;
+  --r:22px; --ease:cubic-bezier(.22,1,.36,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer;border:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 22px}
+
+/* nav */
+nav{position:fixed;inset:0 0 auto 0;z-index:50;height:52px;display:flex;align-items:center;
+  background:rgba(22,22,23,.72);backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);color:#f5f5f7;font-size:13px}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;width:100%}
+nav .logo{font-weight:700;font-size:16px;letter-spacing:-.02em;display:flex;gap:8px;align-items:center}
+nav .logo i{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--blue),var(--purple));display:inline-block}
+nav .links{display:flex;gap:26px;opacity:.85}
+nav .links a:hover{opacity:1;color:#fff}
+@media(max-width:760px){nav .links{display:none}}
+
+/* hero */
+.hero{background:var(--dark);color:var(--dink);min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:120px 0 80px}
+.hero .glow{position:absolute;width:900px;height:900px;border-radius:50%;filter:blur(120px);opacity:.35;
+  background:radial-gradient(circle,#2b6cff 0%,#7a2bff 40%,transparent 70%);top:-200px;right:-300px;animation:drift 14s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translate(-160px,120px) scale(1.1)}}
+.hero .wrap{position:relative;display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center}
+@media(max-width:900px){.hero .wrap{grid-template-columns:1fr}}
+.eyebrow{font-size:14px;font-weight:600;letter-spacing:.02em;color:var(--orange);margin-bottom:18px}
+h1{font-size:clamp(48px,7.5vw,96px);line-height:1.02;letter-spacing:-.045em;font-weight:800}
+.grad{background:linear-gradient(90deg,#4facfe,#a66cff 50%,#ff6ec4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{font-size:clamp(18px,2vw,23px);color:var(--dmuted);margin:26px 0 36px;max-width:560px;line-height:1.45;letter-spacing:-.01em}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 24px;border-radius:999px;font-size:16px;font-weight:500;transition:transform .3s var(--ease),background .3s}
+.btn:hover{transform:scale(1.04)}
+.btn.primary{background:var(--blue);color:#fff}
+.btn.ghost{color:#2997ff}
+.btn.ghost:hover{text-decoration:underline}
+.stack{position:relative;height:420px}
+.float{position:absolute;width:290px;padding:20px 22px;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);animation:bob 6s ease-in-out infinite;will-change:transform}
+.float:nth-child(1){top:10px;left:20px}
+.float:nth-child(2){top:150px;left:110px;animation-delay:-2s}
+.float:nth-child(3){top:290px;left:0;animation-delay:-4s}
+@keyframes bob{50%{transform:translateY(-14px)}}
+.float small{font-size:12px;color:var(--dmuted);display:block;margin-bottom:6px}
+.float b{font-size:20px;letter-spacing:-.02em}
+.pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:999px;margin-top:10px}
+.p-APPROVE,.p-AUTO_REFUNDED,.p-HUMAN_APPROVED{background:rgba(48,209,88,.16);color:var(--green)}
+.p-PARTIAL_APPROVE{background:rgba(64,200,224,.16);color:var(--teal)}
+.p-NEED_PROOF,.p-AWAITING_PROOF{background:rgba(255,159,10,.16);color:var(--orange)}
+.p-REJECT,.p-REJECTED,.p-HUMAN_REJECTED{background:rgba(255,69,58,.16);color:var(--red)}
+.p-HOLD_FOR_HUMAN,.p-PENDING_HUMAN{background:rgba(191,90,242,.16);color:var(--purple)}
+.scrollcue{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-size:12px;color:var(--dmuted);animation:bob 2.4s infinite}
+
+/* sections */
+section{padding:120px 0}
+.h2{font-size:clamp(36px,5vw,64px);letter-spacing:-.04em;line-height:1.05;font-weight:800;margin-bottom:18px}
+.lead{font-size:clamp(17px,1.6vw,21px);color:var(--muted);max-width:680px;line-height:1.5;margin-bottom:56px}
+.dark{background:var(--dark);color:var(--dink)} .dark .lead{color:var(--dmuted)}
+.reveal{opacity:0;transform:translateY(40px);transition:opacity 1s var(--ease),transform 1s var(--ease)}
+.reveal.in{opacity:1;transform:none}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+@media(max-width:800px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--card);border-radius:var(--r);padding:30px 26px;border:1px solid var(--line)}
+.stat .n{font-size:clamp(40px,5vw,60px);font-weight:800;letter-spacing:-.04em}
+.stat .l{color:var(--muted);font-size:15px;margin-top:6px}
+
+/* how it works */
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+@media(max-width:900px){.tools{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.tools{grid-template-columns:1fr}}
+.tool{background:var(--dark3);border-radius:var(--r);padding:30px;min-height:220px;position:relative;overflow:hidden;transition:transform .5s var(--ease)}
+.tool:hover{transform:translateY(-6px) scale(1.01)}
+.tool .ic{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;margin-bottom:22px}
+.tool h3{font-size:22px;letter-spacing:-.02em;margin-bottom:8px}
+.tool p{color:var(--dmuted);font-size:15px;line-height:1.5}
+.tool code{font-size:12px;color:#8e8e93;display:block;margin-top:14px}
+.tool.wide{grid-column:span 3;background:linear-gradient(135deg,#1a1033,#0c1a33);min-height:auto}
+@media(max-width:900px){.tool.wide{grid-column:span 2}} @media(max-width:560px){.tool.wide{grid-column:span 1}}
+.loop{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+.loop span{padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.08);font-weight:600;font-size:15px;opacity:.35;transition:opacity .4s,background .4s}
+.loop span.on{opacity:1;background:rgba(41,151,255,.25)}
+
+/* console */
+.console{display:grid;grid-template-columns:380px 1fr;gap:22px;align-items:start}
+@media(max-width:960px){.console{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.chip{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:500;transition:all .25s}
+.chip:hover{border-color:var(--ink)} .chip.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:14px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+input,textarea{width:100%;font:inherit;font-size:15px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:#f5f5f7;outline:none;transition:border .2s,background .2s}
+input:focus,textarea:focus{border-color:var(--blue);background:#fff}
+textarea{min-height:96px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.toggle{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:15px}
+.toggle input{width:auto}
+.run{width:100%;margin-top:20px;justify-content:center;font-size:17px;padding:15px}
+.run[disabled]{opacity:.5;transform:none}
+.expect{font-size:13px;color:var(--muted);margin-top:10px}
+.trace{min-height:420px}
+.empty{color:var(--muted);text-align:center;padding:120px 20px;font-size:17px}
+.step{display:grid;grid-template-columns:36px 1fr;gap:14px;padding:12px 0;animation:in .6s var(--ease) both}
+@keyframes in{from{opacity:0;transform:translateY(16px)}}
+.step .dot{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:#f2f2f7;position:relative}
+.step:not(:last-child) .dot::after{content:"";position:absolute;top:40px;left:17px;width:2px;height:calc(100% + 0px);background:var(--line)}
+.step .t{font-weight:600;font-size:15px} .step .d{color:var(--muted);font-size:14px;margin-top:3px;line-height:1.45}
+.step.err .dot{background:rgba(255,69,58,.12)} .step.err .t{color:var(--red)}
+.step details{margin-top:6px} .step summary{font-size:12px;color:var(--blue);cursor:pointer}
+.step pre{font-size:11.5px;background:#f5f5f7;padding:10px;border-radius:10px;overflow:auto;max-height:200px;margin-top:6px}
+.thinking{display:flex;gap:6px;padding:14px 0 0 50px} .thinking i{width:8px;height:8px;border-radius:50%;background:var(--muted);animation:pulse 1s infinite}
+.thinking i:nth-child(2){animation-delay:.15s}.thinking i:nth-child(3){animation-delay:.3s}
+@keyframes pulse{50%{opacity:.2;transform:scale(.7)}}
+
+.verdict{margin-top:22px;border-radius:var(--r);padding:30px;color:#fff;animation:pop .8s var(--ease) both;position:relative;overflow:hidden}
+@keyframes pop{from{opacity:0;transform:scale(.94)}}
+.verdict .big{font-size:clamp(30px,4vw,46px);font-weight:800;letter-spacing:-.03em}
+.verdict .amt{font-size:22px;opacity:.9;margin-top:4px}
+.verdict .meta{margin-top:18px;font-size:15px;line-height:1.55;opacity:.95}
+.verdict .meta b{opacity:1}
+.verdict .note{margin-top:12px;background:rgba(0,0,0,.22);padding:10px 14px;border-radius:12px;font-size:14px}
+.v-APPROVE,.v-PARTIAL_APPROVE{background:linear-gradient(135deg,#1f9d4c,#30d158)}
+.v-NEED_PROOF{background:linear-gradient(135deg,#d97a00,#ff9f0a)}
+.v-REJECT{background:linear-gradient(135deg,#c4271f,#ff453a)}
+.v-HOLD_FOR_HUMAN{background:linear-gradient(135deg,#7b2fbf,#bf5af2)}
+
+/* queue + memory */
+.grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+.qcard{background:var(--dark3);border-radius:var(--r);padding:24px;animation:in .6s var(--ease) both}
+.qcard .top{display:flex;justify-content:space-between;align-items:center}
+.qcard h4{font-size:20px;letter-spacing:-.02em}
+.qcard .money{font-size:34px;font-weight:800;letter-spacing:-.03em;margin:14px 0 6px}
+.qcard .why{color:var(--dmuted);font-size:14px;line-height:1.5;min-height:42px}
+.flag{display:inline-block;font-size:12px;background:rgba(255,69,58,.15);color:#ff6961;padding:4px 10px;border-radius:999px;margin:10px 6px 0 0}
+.qcard input{background:#2c2c2e;border-color:#3a3a3c;color:#fff;margin-top:14px}
+.qbtns{display:flex;gap:10px;margin-top:12px}
+.qbtns button{flex:1;padding:11px;border-radius:12px;font-weight:600;transition:transform .2s}
+.qbtns button:hover{transform:scale(1.03)}
+.ok{background:var(--green);color:#000} .no{background:#3a3a3c;color:#fff}
+.searchrow{display:flex;gap:10px;max-width:460px;margin-bottom:28px}
+.searchrow input{background:#fff}
+.tl{border-left:2px solid var(--line);margin-left:8px;padding-left:24px}
+.tl .it{position:relative;padding:0 0 26px;animation:in .6s var(--ease) both}
+.tl .it::before{content:"";position:absolute;left:-31px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 4px var(--bg)}
+.tl .date{font-size:13px;color:var(--muted)} .tl .msg{font-size:17px;font-weight:600;margin:4px 0}
+.alert{background:rgba(255,69,58,.08);color:#d70015;padding:14px 18px;border-radius:14px;margin-bottom:24px;font-weight:500}
+
+/* results */
+.bars{display:grid;gap:14px;margin-top:10px}
+.bar{display:grid;grid-template-columns:170px 1fr 50px;gap:14px;align-items:center;font-size:15px}
+.bar .track{height:10px;border-radius:99px;background:var(--dark3);overflow:hidden}
+.bar .fill{height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#2997ff,#bf5af2);transition:width 1.4s var(--ease)}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:40px}
+th{text-align:left;color:var(--dmuted);font-weight:500;padding:10px 8px;border-bottom:1px solid #2c2c2e}
+td{padding:12px 8px;border-bottom:1px solid #1c1c1e}
+.tick{color:var(--green);font-weight:700} .cross{color:var(--red);font-weight:700}
+.tablewrap{overflow-x:auto}
+footer{padding:50px 0;color:var(--muted);font-size:13px;text-align:center}
+
+/* autopilot */
+.ap-head{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:28px}
+.switch{display:flex;align-items:center;gap:12px;background:var(--dark3);padding:10px 18px 10px 10px;border-radius:999px;font-weight:600}
+.switch .knob{width:52px;height:32px;border-radius:99px;background:#3a3a3c;position:relative;transition:background .3s}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;transition:transform .35s var(--ease)}
+.switch.on .knob{background:var(--green)} .switch.on .knob::after{transform:translateX(20px)}
+.btn.dk{background:var(--dark3);color:#fff}
+.apgrid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+@media(max-width:960px){.apgrid{grid-template-columns:1fr}}
+.dpanel{background:var(--dark3);border-radius:var(--r);padding:24px}
+.dpanel h4{font-size:15px;color:var(--dmuted);font-weight:600;margin-bottom:14px;text-transform:uppercase;letter-spacing:.05em}
+.counters{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+@media(max-width:700px){.counters{grid-template-columns:repeat(2,1fr)}}
+.ctr{background:var(--dark3);border-radius:18px;padding:18px}
+.ctr .n{font-size:34px;font-weight:800;letter-spacing:-.03em} .ctr .l{font-size:13px;color:var(--dmuted)}
+.now{min-height:260px}
+.now .tid{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.now .msg{color:var(--dmuted);font-size:14px;margin:6px 0 14px}
+.lstep{font-size:14px;padding:7px 0;border-bottom:1px solid #2c2c2e;animation:in .5s var(--ease) both;display:flex;gap:10px}
+.idle{color:var(--dmuted);display:flex;align-items:center;gap:10px;font-size:15px;padding:40px 0}
+.radar{width:12px;height:12px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(48,209,88,.6);animation:radar 1.6s infinite}
+@keyframes radar{to{box-shadow:0 0 0 14px rgba(48,209,88,0)}}
+.ibox{max-height:420px;overflow:auto}
+.irow{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #2c2c2e;font-size:14px}
+.irow .m{color:var(--dmuted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.s-QUEUED{background:rgba(142,142,147,.2);color:#c7c7cc}
+.s-PROCESSING{background:rgba(41,151,255,.2);color:#64b5ff;animation:pulse 1.2s infinite}
+.s-FAILED{background:rgba(255,69,58,.16);color:var(--red)}
+.submit{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.submit textarea{grid-column:span 2;min-height:70px}
+.dpanel input,.dpanel textarea{background:#2c2c2e;border-color:#3a3a3c;color:#fff}
+
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+@media(max-width:700px){.vgrid{grid-template-columns:1fr}}
+.vbox{background:rgba(0,0,0,.22);border-radius:14px;padding:14px 16px;font-size:14px}
+.vbox h5{font-size:12px;text-transform:uppercase;letter-spacing:.06em;opacity:.8;margin-bottom:8px}
+.meter{height:8px;border-radius:99px;background:rgba(255,255,255,.2);overflow:hidden;margin:6px 0 10px}
+.meter i{display:block;height:100%;border-radius:99px;background:#fff;width:0;transition:width 1.2s var(--ease)}
+.sig{display:flex;justify-content:space-between;gap:10px;padding:3px 0}
+.ev{display:flex;gap:8px;padding:3px 0;align-items:baseline}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:14px;transition:transform .5s var(--ease);z-index:99;font-size:14px}
+.toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="logo" href="#top"><i></i>RefundIQ</a>
+  <div class="links"><a href="#autopilot">Autopilot</a><a href="#how">How it works</a><a href="#live">Live agent</a><a href="#queue">Approvals</a><a href="#memory">Memory</a><a href="#results">Results</a><a href="#" id="resetBtn" style="color:#ff9f0a">Reset demo</a></div>
+</div></nav>
+
+<header class="hero" id="top">
+  <div class="glow"></div>
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Agentic AI · Refund &amp; Returns Desk</div>
+      <h1>Refunds.<br><span class="grad">Decided in seconds.</span></h1>
+      <p class="sub">An autonomous agent that checks the order, tracks the parcel, reads the policy, remembers every customer and knows exactly when to call a human.</p>
+      <a class="btn primary" href="#autopilot">Watch it run</a>
+      <a class="btn ghost" href="#how">See how it works ›</a>
+    </div>
+    <div class="stack" id="stack">
+      <div class="float"><small>T01 · Phone case · Rs 499</small><b>Refunded automatically</b><br><span class="pill p-APPROVE">APPROVED · P12</span></div>
+      <div class="float"><small>T05 · Smartwatch · Rs 12,499</small><b>Waiting for a human</b><br><span class="pill p-HOLD_FOR_HUMAN">HELD · P9</span></div>
+      <div class="float"><small>T12 · 4th refund in 60 days</small><b>Abuse caught</b><br><span class="pill p-REJECT">FLAGGED · P10</span></div>
+    </div>
+  </div>
+  <div class="scrollcue">Scroll ↓</div>
+</header>
+
+<section class="dark" id="autopilot"><div class="wrap">
+  <div class="h2 reveal">It runs <span class="grad">on its own.</span></div>
+  <p class="lead reveal">Autopilot watches the inbox around the clock. New tickets are picked up, investigated and resolved with no one pressing a button. Risky ones wait for a human.</p>
+  <div class="ap-head reveal">
+    <div class="switch on" id="apSwitch"><div class="knob"></div><span id="apLabel">Autopilot on</span></div>
+    <button class="btn primary" id="loadSamples">Drop 18 tickets into the inbox</button>
+  </div>
+  <div class="counters reveal">
+    <div class="ctr"><div class="n" id="c_done">0</div><div class="l">Resolved</div></div>
+    <div class="ctr"><div class="n" id="c_queue">0</div><div class="l">Waiting in inbox</div></div>
+    <div class="ctr"><div class="n" id="c_held">0</div><div class="l">Sent to a human</div></div>
+    <div class="ctr"><div class="n" id="c_refund">Rs 0</div><div class="l">Refunded automatically</div></div>
+  </div>
+  <div class="apgrid">
+    <div class="dpanel now reveal"><h4>Working on now</h4><div id="apNow"></div></div>
+    <div class="dpanel reveal"><h4>Inbox</h4><div class="ibox" id="apInbox"></div></div>
+  </div>
+  <div class="dpanel reveal" style="margin-top:18px"><h4>Submit a ticket as a customer</h4>
+    <div class="submit">
+      <input id="s_cust" placeholder="Customer ID, e.g. C002" value="C002">
+      <input id="s_order" placeholder="Order ID, e.g. O1002" value="O1002">
+      <textarea id="s_msg" placeholder="Describe the problem...">The T-shirt doesn't fit, tags still on. Please refund.</textarea>
+      <label class="toggle" style="text-transform:none;letter-spacing:0;font-size:15px;color:#fff;margin:0"><input type="checkbox" id="s_photo"> Photo attached</label>
+      <button class="btn primary" id="s_send" style="justify-content:center">Send to inbox</button>
+    </div>
+  </div>
+</div></section>
+
+<section id="stats-sec"><div class="wrap">
+  <div class="h2 reveal">Measured, not guessed.</div>
+  <p class="lead reveal">Every number below comes from the latest run of our labelled evaluation set.</p>
+  <div class="stats" id="stats">
+    <div class="stat reveal"><div class="n" data-k="accuracy">–</div><div class="l">Decision accuracy</div></div>
+    <div class="stat reveal"><div class="n" data-k="tickets">–</div><div class="l">Eval tickets</div></div>
+    <div class="stat reveal"><div class="n" data-k="abuse">–</div><div class="l">Abuse cases caught</div></div>
+    <div class="stat reveal"><div class="n" data-k="unsafe">–</div><div class="l">Unsafe auto-refunds</div></div>
+  </div>
+</div></section>
+
+<section style="padding-top:0"><div class="wrap">
+  <div class="h2 reveal">What it's worth.</div>
+  <p class="lead reveal">Business impact, measured on the same evaluation run. Manual baseline assumed at 8 minutes per ticket.</p>
+  <div class="stats" id="impact">
+    <div class="stat reveal"><div class="n grad" id="i_speed">–</div><div class="l">Faster than a human agent (<span id="i_secs">–</span>s per ticket)</div></div>
+    <div class="stat reveal"><div class="n grad" id="i_block">–</div><div class="l">Abuse and duplicate refunds blocked</div></div>
+    <div class="stat reveal"><div class="n grad" id="i_auto">–</div><div class="l">Resolved with no human needed</div></div>
+    <div class="stat reveal"><div class="n grad" id="i_fp">–</div><div class="l">Genuine customers wrongly blocked</div></div>
+  </div>
+  <p class="reveal" style="color:var(--muted);font-size:14px;margin-top:18px">Refund amounts correct: <b id="i_amt">–</b> · Escalations correct: <b id="i_esc">–</b> · Hours saved per 1,000 tickets: <b id="i_hours">–</b></p>
+</div></section>
+
+<section class="dark" id="how"><div class="wrap">
+  <div class="h2 reveal">Plan. Act. Observe.<br><span class="grad">Re-plan.</span></div>
+  <p class="lead reveal">Gemini drives a loop over six real tools. Then hard-coded guardrails get the final word, so money never moves on an AI mistake.</p>
+  <div class="tools">
+    <div class="tool wide reveal"><h3>The agent loop</h3><p>Each ticket takes several reasoning steps. When a result changes the picture, like a parcel that never arrived, the agent changes its plan.</p>
+      <div class="loop" id="loop"><span>Plan</span><span>Act</span><span>Observe</span><span>Re-plan</span><span>Decide</span><span>Self-check</span><span>Guardrail</span><span>Verify</span></div></div>
+    <div class="tool reveal"><div class="ic" style="background:rgba(41,151,255,.18)">🗄️</div><h3>Order database</h3><p>Item, price paid, serial number and tracking ID from a SQLite store.</p><code>get_order()</code></div>
+    <div class="tool reveal"><div class="ic" style="background:rgba(255,159,10,.18)">🚚</div><h3>Courier API</h3><p>A live HTTP service for delivery status. Times out? It retries, then escalates safely.</p><code>track_shipment()</code></div>
+    <div class="tool reveal"><div class="ic" style="background:rgba(191,90,242,.18)">📜</div><h3>Policy RAG</h3><p>Retrieves the exact clause behind every decision, and quotes it back.</p><code>search_policy()</code></div>
+    <div class="tool reveal"><div class="ic" style="background:rgba(48,209,88,.18)">🧠</div><h3>Customer memory</h3><p>Every past ticket is remembered. Repeat returners can't hide.</p><code>get_customer_history()</code></div>
+    <div class="tool reveal"><div class="ic" style="background:rgba(64,200,224,.18)">📷</div><h3>Proof request</h3><p>No photo of the damage? The agent asks before it decides.</p><code>request_proof()</code></div>
+    <div class="tool reveal"><div class="ic" style="background:rgba(255,214,10,.18)">🧾</div><h3>Refund ledger</h3><p>Checks for an existing refund before paying. Every refund is written, then read back to verify. No double payouts.</p><code>check_refund_status()</code></div>
+    <div class="tool wide reveal"><div class="ic" style="background:rgba(255,69,58,.18)">🛡️</div><h3>Guardrails the AI can't override</h3><p>Over Rs 2,000, repeat returner, serial mismatch, duplicate refund, prompt injection or system failure: the code blocks or holds it for a human, whatever the model says. Every human decision is logged with reviewer and timestamp.</p><code>apply_guardrails()</code></div>
+  </div>
+</div></section>
+
+<section id="live"><div class="wrap">
+  <div class="h2 reveal">Watch it think.</div>
+  <p class="lead reveal">Pick a ticket, or write your own, and follow every step the agent takes in real time.</p>
+  <div class="console">
+    <div class="panel reveal">
+      <div class="chips" id="chips"></div>
+      <div class="row">
+        <div><label>Ticket</label><input id="f_ticket"></div>
+        <div><label>Customer</label><input id="f_cust"></div>
+        <div><label>Order</label><input id="f_order"></div>
+      </div>
+      <label>Serial number</label><input id="f_serial" placeholder="optional">
+      <label>Customer message</label><textarea id="f_msg"></textarea>
+      <div class="toggle"><input type="checkbox" id="f_photo"><span>Photo attached</span></div>
+      <button class="btn primary run" id="runBtn">Run agent</button>
+      <div class="expect" id="expect"></div>
+    </div>
+    <div class="panel trace reveal" id="trace"><div class="empty">The agent's reasoning will appear here, step by step.</div></div>
+  </div>
+</div></section>
+
+<section class="dark" id="queue"><div class="wrap">
+  <div class="h2 reveal">A human stays in charge.</div>
+  <p class="lead reveal">Anything risky waits here. One tap to approve or reject, and the decision is remembered.</p>
+  <div class="grid2" id="qgrid"></div>
+</div></section>
+
+<section id="memory"><div class="wrap">
+  <div class="h2 reveal">It never forgets a customer.</div>
+  <p class="lead reveal">Each decision is written back to memory and read on the customer's next ticket. Try C004.</p>
+  <div class="searchrow reveal"><input id="cid" value="C004"><button class="btn primary" id="cbtn">Look up</button></div>
+  <div id="mem"></div>
+</div></section>
+
+<section class="dark" id="results"><div class="wrap">
+  <div class="h2 reveal">Results by category.</div>
+  <p class="lead reveal">Run <code>python eval.py</code>, then refresh to update.</p>
+  <div class="bars" id="bars"></div>
+  <div class="tablewrap"><table id="etable"></table></div>
+</div></section>
+
+<footer>RefundIQ · National Level Agentic AI Hackathon 2026 · Problem 16</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const inr = n => "Rs " + Number(n || 0).toLocaleString("en-IN");
+const NICE = {APPROVE:"Approved",PARTIAL_APPROVE:"Partially approved",NEED_PROOF:"Proof requested",REJECT:"Rejected",HOLD_FOR_HUMAN:"Held for a human"};
+function toast(t){const el=$("#toast");el.textContent=t;el.classList.add("show");setTimeout(()=>el.classList.remove("show"),2600)}
+
+/* scroll reveal + hero parallax */
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting){ e.target.classList.add("in"); io.unobserve(e.target); }
+}), {threshold:.15});
+function watch(){ document.querySelectorAll(".reveal:not(.in)").forEach((el,i) => { el.style.transitionDelay = (i%4)*80+"ms"; io.observe(el); }); }
+watch();
+addEventListener("scroll", () => {
+  const y = scrollY; $("#stack").style.transform = `translateY(${y*0.25}px)`;
+}, {passive:true});
+
+/* animated agent loop */
+let li = 0; setInterval(() => { const s = document.querySelectorAll("#loop span"); s.forEach(x=>x.classList.remove("on")); s[li%s.length].classList.add("on"); li++; }, 900);
+
+/* tickets */
+let TICKETS = [];
+async function loadTickets(){
+  TICKETS = await (await fetch("/api/tickets")).json();
+  $("#chips").innerHTML = TICKETS.map((t,i)=>`<button class="chip" data-i="${i}">${t.ticket_id} · ${esc(t.category)}</button>`).join("")
+    + `<button class="chip" data-i="-1">✍️ Custom</button>`;
+  document.querySelectorAll(".chip").forEach(c => c.onclick = () => pick(+c.dataset.i));
+  pick(0);
+}
+function pick(i){
+  document.querySelectorAll(".chip").forEach(c=>c.classList.toggle("sel", +c.dataset.i===i));
+  const t = i>=0 ? TICKETS[i] : {ticket_id:"T99",customer_id:"C001",order_id:"O1001",message:"",photo_attached:false,serial_number:""};
+  $("#f_ticket").value=t.ticket_id; $("#f_cust").value=t.customer_id; $("#f_order").value=t.order_id;
+  $("#f_msg").value=t.message; $("#f_serial").value=t.serial_number||""; $("#f_photo").checked=!!t.photo_attached;
+  $("#expect").innerHTML = t.expected ? `Expected: <span class="pill p-${t.expected}">${t.expected}</span>` : "";
+}
+
+/* describe each step in plain words */
+function describe(s){
+  if (s.type==="thought") return {ic:"🧭",t:"Thinking",d:esc(s.text)};
+  if (s.type==="error") return {ic:"⚠️",t:"Error",d:esc(s.text),err:true};
+  if (s.type==="decision") return {ic:"🤖",t:`Agent proposes: ${NICE[s.args.decision]||s.args.decision}`,d:`${inr(s.args.refund_amount)} · clauses ${esc(s.args.clause_ids)}`};
+  if (s.type==="critique") return {ic:"🔁",t:`Self-check rejected ${NICE[s.args.decision]||s.args.decision}, re-planning`,d:s.issues.map(esc).join("<br>"),err:true};
+  if (s.type==="execution") return {ic:"💸",t:s.verified?"Refund issued and verified":"Refund verification failed",d:`${esc(s.refund_id)} · ${inr(s.amount)} · ledger read-back ${s.verified?"matches ✓":"MISMATCH"}`,err:!s.verified};
+  if (s.type==="guardrail") return {ic:"🛡️",t:"Guardrails checked",d:(s.final.guardrail_notes.length?s.final.guardrail_notes.map(esc).join("<br>"):"All checks passed, no override needed")};
+  if (s.type==="tool"){
+    const r=s.result||{}, a=s.args||{}; const err = r.error;
+    const m = {
+      get_order:()=>err?`Not found: ${esc(r.error)}`:`${esc(r.item)} · ${inr(r.price_paid_inr)} · ${esc(r.category)}`,
+      track_shipment:()=>err?esc(r.error):`${esc(r.status)}${r.delivered_on?` · delivered ${r.days_since_delivery} days ago`:` · expected ${esc(r.expected_delivery)}`}`,
+      get_customer_history:()=>err?esc(r.error):`${esc(r.name)} · ${r.total_past_tickets} past tickets · ${r.refund_requests_last_60_days} in last 60 days`,
+      search_policy:()=>`"${esc(a.query)}" → ${(r.clauses||[]).map(c=>c.clause_id+" "+esc(c.title)).join(", ")}`,
+      request_proof:()=>esc(r.message_sent_to_customer||""),
+      check_refund_status:()=>r.already_refunded?`Already refunded: ${esc(r.existing_refund.refund_id)} · ${inr(r.existing_refund.amount)}`:"No previous refund for this order",
+    };
+    const titles={get_order:"Checked order database",track_shipment:"Called courier API",get_customer_history:"Read customer memory",search_policy:"Searched return policy",request_proof:"Asked customer for proof",check_refund_status:"Checked refund ledger"};
+    const icons={get_order:"🗄️",track_shipment:"🚚",get_customer_history:"🧠",search_policy:"📜",request_proof:"📷",check_refund_status:"🧾"};
+    return {ic:icons[s.name]||"🔧",t:titles[s.name]||s.name,d:(m[s.name]||(()=>""))(),raw:r,err:!!err};
+  }
+  return null;
+}
+function addStep(s){
+  const x = describe(s); if(!x) return;
+  const th = $("#trace .thinking"); if (th) th.remove();
+  const el = document.createElement("div"); el.className = "step"+(x.err?" err":"");
+  el.innerHTML = `<div class="dot">${x.ic}</div><div><div class="t">${x.t}</div><div class="d">${x.d}</div>${x.raw?`<details><summary>Raw result</summary><pre>${esc(JSON.stringify(x.raw,null,2))}</pre></details>`:""}</div>`;
+  $("#trace").appendChild(el);
+  const tk = document.createElement("div"); tk.className="thinking"; tk.innerHTML="<i></i><i></i><i></i>"; $("#trace").appendChild(tk);
+}
+function riskEvidence(f){
+  const r=f.risk, ev=f.evidence||[]; if(!r && !ev.length) return "";
+  const icon={verified:"✓",missing:"⚠",contradictory:"✗"};
+  return `<div class="vgrid">
+    ${r?`<div class="vbox"><h5>Risk score</h5><b style="font-size:26px">${r.score}</b><span style="opacity:.8"> / 100 · ${r.level}</span>
+      <div class="meter"><i data-w="${r.score}"></i></div>
+      ${r.signals.length?r.signals.map(x=>`<div class="sig"><span>${esc(x.signal.replace(/_/g," "))}</span><b>+${x.points}</b></div>`).join(""):'<div style="opacity:.8">No risk signals</div>'}</div>`:""}
+    ${ev.length?`<div class="vbox"><h5>Evidence</h5>${ev.map(e=>`<div class="ev"><b>${icon[e.status]||"·"}</b><span><b>${esc(e.item)}</b> <span style="opacity:.8">${esc(e.detail)}</span></span></div>`).join("")}</div>`:""}
+  </div>`;
+}
+function verdict(d){
+  const th = $("#trace .thinking"); if (th) th.remove();
+  const f = d.final, p = d.proposal || {};
+  if (!f){ return; }
+  const el = document.createElement("div"); el.className = "verdict v-"+f.final_decision;
+  el.innerHTML = `<div class="big">${NICE[f.final_decision]}</div>
+    <div class="amt">${inr(f.refund_amount)} · ${f.status.replace(/_/g," ").toLowerCase()}</div>
+    ${f.overridden?`<div class="note">🛡️ Guardrail overrode the agent's ${esc(f.llm_decision)}</div>`:""}
+    ${Object.entries(f.flags||{}).map(([k,v])=>`<div class="note">🚩 <b>${esc(k.replace(/_/g," "))}</b>: ${esc(v)}</div>`).join("")}
+    ${riskEvidence(f)}
+    <div class="meta">${p.clause_ids?`<b>Policy ${esc(p.clause_ids)}:</b> "${esc(p.clause_quote)}"<br>`:""}
+    ${p.reasoning?`<b>Why:</b> ${esc(p.reasoning)}<br>`:""}
+    ${p.customer_reply?`<b>Reply sent:</b> ${esc(p.customer_reply)}<br>`:""}
+    <span style="opacity:.75;font-size:13px">${d.llm_calls} LLM calls · ${d.tool_calls} tool calls</span></div>`;
+  $("#trace").appendChild(el);
+  setTimeout(()=>el.querySelectorAll(".meter i").forEach(m=>m.style.width=m.dataset.w+"%"),50);
+  el.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+$("#runBtn").onclick = async () => {
+  const body = {ticket_id:$("#f_ticket").value.trim(),customer_id:$("#f_cust").value.trim(),order_id:$("#f_order").value.trim(),
+    message:$("#f_msg").value,photo_attached:$("#f_photo").checked,serial_number:$("#f_serial").value.trim()||null};
+  if(!body.message){toast("Write a customer message first");return;}
+  const btn=$("#runBtn"); btn.disabled=true; btn.textContent="Agent working…";
+  $("#trace").innerHTML='<div class="thinking"><i></i><i></i><i></i></div>';
+  try{
+    const res = await fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const reader = res.body.getReader(), dec = new TextDecoder(); let buf="";
+    while(true){
+      const {done,value} = await reader.read(); if(done) break;
+      buf += dec.decode(value,{stream:true}); let i;
+      while((i=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,i); buf=buf.slice(i+1); if(!line.trim()) continue;
+        const s=JSON.parse(line); if(s.type==="done") verdict(s); else addStep(s);
+      }
+    }
+    loadQueue(); loadMemory();
+  }catch(e){ toast("Could not reach the server"); }
+  btn.disabled=false; btn.textContent="Run agent";
+};
+
+/* approval queue */
+async function loadQueue(){
+  const q = await (await fetch("/api/queue")).json();
+  if(!q.length){ $("#qgrid").innerHTML=`<p style="color:var(--dmuted)">Nothing waiting yet. Run T04, T05 or T12 above.</p>`; return; }
+  $("#qgrid").innerHTML = q.map(r=>{
+    let flags={}; try{flags=JSON.parse(r.flags||"{}")}catch(e){}
+    const pending = r.status==="PENDING_HUMAN";
+    return `<div class="qcard"><div class="top"><h4>${esc(r.ticket_id)} · ${esc(r.customer_id)}</h4><span class="pill p-${r.status}">${r.status.replace(/_/g," ")}</span></div>
+      <div class="money">${inr(r.refund_amount)}</div><div class="why">${esc(r.reasoning||"")}</div>
+      ${Object.keys(flags).map(k=>`<span class="flag">${esc(k.replace(/_/g," "))}</span>`).join("")}
+      ${pending?`<input placeholder="Reviewer note" id="n_${esc(r.ticket_id)}"><div class="qbtns">
+        <button class="ok" onclick="review('${esc(r.ticket_id)}',true)">Approve refund</button>
+        <button class="no" onclick="review('${esc(r.ticket_id)}',false)">Reject</button></div>`:`<div class="why" style="margin-top:12px;min-height:0">🧾 ${esc(r.reviewer_note||"")} · ${esc(r.reviewed_at||"")}</div>`}</div>`;
+  }).join("");
+}
+async function review(id,approve){
+  const note=(document.getElementById("n_"+id)||{}).value||"";
+  const d = await (await fetch("/api/review",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ticket_id:id,approve,note})})).json();
+  const ex = d.execution||{};
+  toast(approve?`${id} approved · ${ex.refund_id||"refund"} issued${ex.verified?" and verified ✓":""}`:`${id} rejected`); loadQueue(); loadMemory();
+}
+
+/* memory */
+async function loadMemory(){
+  const cid=$("#cid").value.trim(); if(!cid) return;
+  const d = await (await fetch("/api/customer/"+encodeURIComponent(cid))).json();
+  if(!d.customer){ $("#mem").innerHTML=`<p class="lead">No customer ${esc(cid)}.</p>`; return; }
+  const cutoff="2026-09-01"; const recent=d.tickets.filter(t=>t.created_date>=cutoff).length;
+  $("#mem").innerHTML = `<h3 style="font-size:28px;letter-spacing:-.02em;margin-bottom:16px">${esc(d.customer.name)}</h3>
+    ${recent>=3?`<div class="alert">🚩 ${recent} refund requests in the last 60 days: flagged as a repeat returner (P10)</div>`:""}
+    <div class="tl">${d.tickets.map(t=>`<div class="it"><div class="date">${esc(t.created_date)} · ${esc(t.ticket_id)} · order ${esc(t.order_id)}</div>
+      <div class="msg">${esc(t.message)}</div><span class="pill p-${t.status}">${esc((t.status||"").replace(/_/g," "))}</span> <span style="color:var(--muted);font-size:14px">${inr(t.refund_amount)}</span></div>`).join("")||"<p>No tickets yet.</p>"}</div>`;
+}
+$("#cbtn").onclick=loadMemory; $("#cid").onkeydown=e=>{if(e.key==="Enter")loadMemory()};
+
+/* eval results */
+function countUp(el,to,suffix=""){
+  let s=null; const step=t=>{ if(!s)s=t; const p=Math.min((t-s)/1400,1); const e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(to*e)+suffix; if(p<1) requestAnimationFrame(step); }; requestAnimationFrame(step);
+}
+async function loadEval(){
+  const d = await (await fetch("/api/eval")).json();
+  if(d.missing){ $("#bars").innerHTML=`<p style="color:var(--dmuted)">No results yet. Run <code>python eval.py</code> in the terminal.</p>`; return; }
+  const s=d.summary;
+  const statObs = new IntersectionObserver(es=>{ if(!es[0].isIntersecting) return; statObs.disconnect();
+    countUp(document.querySelector('[data-k="accuracy"]'),Math.round(s.accuracy*100),"%");
+    countUp(document.querySelector('[data-k="tickets"]'),s.tickets);
+    document.querySelector('[data-k="abuse"]').textContent=s.abuse_caught;
+    countUp(document.querySelector('[data-k="unsafe"]'),s.unsafe_auto_refunds);
+    if (s.speedup_x!==undefined){
+      countUp($("#i_speed"),s.speedup_x,"×"); $("#i_secs").textContent=s.avg_seconds_per_ticket;
+      $("#i_block").textContent=inr(s.abuse_blocked_inr); countUp($("#i_auto"),s.resolved_without_human_pct,"%");
+      $("#i_fp").textContent=s.false_positives_on_legit; $("#i_amt").textContent=s.refund_amount_accuracy;
+      $("#i_esc").textContent=s.escalation_accuracy; $("#i_hours").textContent=s.hours_saved_per_1000_tickets;
+    }
+  },{threshold:.4}); statObs.observe($("#stats"));
+  $("#bars").innerHTML = Object.entries(s.by_category).map(([c,v])=>{const [a,b]=v.split("/").map(Number);
+    return `<div class="bar reveal"><span>${esc(c)}</span><div class="track"><div class="fill" data-w="${b?a/b*100:0}"></div></div><span>${v}</span></div>`}).join("");
+  const barObs = new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ document.querySelectorAll(".fill").forEach(f=>f.style.width=f.dataset.w+"%"); barObs.disconnect(); }}),{threshold:.3});
+  barObs.observe($("#bars"));
+  $("#etable").innerHTML = `<tr><th>Ticket</th><th>Category</th><th>Expected</th><th>Agent</th><th>Final</th><th>Refund</th><th></th></tr>`+
+    d.results.map(r=>`<tr><td>${r.ticket_id}</td><td>${esc(r.category)}</td><td><span class="pill p-${r.expected}">${r.expected}</span></td>
+      <td>${esc(r.llm_decision||"–")}</td><td><span class="pill p-${r.final_decision}">${r.final_decision}</span>${r.overridden?" 🛡️":""}</td>
+      <td>${inr(r.refund_amount)}</td><td class="${r.correct?"tick":"cross"}">${r.correct?"✓":"✗"}</td></tr>`).join("");
+  watch();
+}
+
+
+/* autopilot */
+let apOn = true;
+$("#apSwitch").onclick = async () => {
+  apOn = !apOn;
+  await fetch("/api/autopilot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({on:apOn})});
+  renderSwitch(); toast(apOn?"Autopilot on: the agent is working the inbox":"Autopilot paused");
+};
+function renderSwitch(){ $("#apSwitch").classList.toggle("on",apOn); $("#apLabel").textContent = apOn?"Autopilot on":"Autopilot paused"; }
+$("#loadSamples").onclick = async () => { await fetch("/api/inbox/samples",{method:"POST"}); toast("18 tickets dropped into the inbox"); pollAP(); };
+$("#s_send").onclick = async () => {
+  const body={customer_id:$("#s_cust").value.trim(),order_id:$("#s_order").value.trim(),message:$("#s_msg").value,photo_attached:$("#s_photo").checked};
+  if(!body.message.trim()){toast("Write a message first");return;}
+  const d = await (await fetch("/api/inbox",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
+  toast(`Ticket ${d.ticket_id} received, the agent will pick it up`); pollAP();
+};
+let lastSteps = -1, lastDone = -1;
+async function pollAP(){
+  try{
+    const [st, ib] = await Promise.all([(await fetch("/api/autopilot")).json(), (await fetch("/api/inbox")).json()]);
+    apOn = st.on; renderSwitch();
+    const c = st.counts||{}, dcs = st.decisions||{};
+    $("#c_done").textContent = c.DONE||0; $("#c_queue").textContent = (c.QUEUED||0)+(c.PROCESSING||0);
+    $("#c_held").textContent = dcs.HOLD_FOR_HUMAN||0; $("#c_refund").textContent = inr(st.auto_refunded_inr);
+    if (st.current){
+      const steps = st.steps.map(describe).filter(Boolean);
+      $("#apNow").innerHTML = `<div class="tid">${esc(st.current.ticket_id)} · ${esc(st.current.customer_id)}</div><div class="msg">${esc(st.current.message)}</div>`+
+        steps.map(x=>`<div class="lstep"><span>${x.ic}</span><span><b>${x.t}</b><br><span style="color:var(--dmuted)">${x.d}</span></span></div>`).join("")+
+        `<div class="thinking" style="padding-left:0"><i></i><i></i><i></i></div>`;
+    } else {
+      $("#apNow").innerHTML = `<div class="idle"><span class="radar"></span>${st.on?"Watching the inbox for new tickets…":"Autopilot is paused"}</div>`+
+        (st.last_error?`<div style="color:var(--red);font-size:13px">${esc(st.last_error)}</div>`:"");
+    }
+    $("#apInbox").innerHTML = ib.length ? ib.map(r=>{
+      const tag = r.state==="DONE" ? `<span class="pill p-${r.decision}">${esc((r.decision||"").replace(/_/g," "))}</span>` : `<span class="pill s-${r.state}">${r.state}</span>`;
+      return `<div class="irow"><b>${esc(r.ticket_id)}</b><span class="m">${esc(r.message)}</span>${tag}</div>`;}).join("")
+      : `<p style="color:var(--dmuted)">Inbox is empty. Drop in the sample tickets or submit one below.</p>`;
+    if ((c.DONE||0) !== lastDone){ lastDone = c.DONE||0; loadQueue(); loadMemory(); }
+  }catch(e){}
+}
+setInterval(pollAP, 1500); pollAP();
+$("#resetBtn").onclick = async e => { e.preventDefault(); if(!confirm("Reset all demo data?")) return;
+  await fetch("/api/reset",{method:"POST"}); $("#trace").innerHTML='<div class="empty">The agent\'s reasoning will appear here, step by step.</div>';
+  loadQueue(); loadMemory(); pollAP(); toast("Demo data reset"); };
+loadTickets(); loadQueue(); loadMemory(); loadEval();
+</script>
+</body>
+</html>
