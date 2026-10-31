@@ -31,8 +31,17 @@ def get_order(order_id: str) -> dict:
 
 
 # ---------- Tool 2: courier tracking API (HTTP, with retry) ----------
-def track_shipment(tracking_id: str) -> dict:
+def track_shipment(order_id: str = "", tracking_id: str = "") -> dict:
     courier_api.start_in_background()
+    if not tracking_id and order_id:
+        con = _db()
+        row = con.execute("SELECT tracking_id FROM orders WHERE order_id = ?", (order_id.strip(),)).fetchone()
+        con.close()
+        if not row:
+            return {"error": f"No shipment found for order {order_id}"}
+        tracking_id = row["tracking_id"]
+    if not tracking_id:
+        return {"error": "track_shipment needs an order_id or tracking_id"}
     url = f"http://{COURIER_HOST}:{COURIER_PORT}/track/{tracking_id.strip()}"
     last_err = None
     for attempt in (1, 2):  # retry once
@@ -114,8 +123,8 @@ TOOL_DECLARATIONS = [
      "description": "Look up an order in the order database: item, category, price paid, serial number, tracking id.",
      "parameters": {"type": O, "properties": {"order_id": {"type": S}}, "required": ["order_id"]}},
     {"name": "track_shipment",
-     "description": "Call the courier API to get delivery status, delivery date and days since delivery.",
-     "parameters": {"type": O, "properties": {"tracking_id": {"type": S}}, "required": ["tracking_id"]}},
+     "description": "Call the courier API (by order id) to get delivery status, delivery date and days since delivery.",
+     "parameters": {"type": O, "properties": {"order_id": {"type": S}}, "required": ["order_id"]}},
     {"name": "get_customer_history",
      "description": "Get the customer's past support tickets and how many refund requests they made in the last 60 days.",
      "parameters": {"type": O, "properties": {"customer_id": {"type": S}}, "required": ["customer_id"]}},
