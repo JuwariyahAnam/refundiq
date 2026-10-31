@@ -316,25 +316,13 @@ footer{padding:50px 0;color:var(--muted);font-size:13px;text-align:center}
 
 <section id="stats-sec" data-roles="guest staff"><div class="wrap">
   <div class="h2 reveal">Measured, not guessed.</div>
-  <p class="lead reveal">Every number below comes from the latest run of our labelled evaluation set.</p>
+  <p class="lead reveal">From our 18 labelled test tickets. Manual time assumed at 8 minutes per ticket.</p>
   <div class="stats" id="stats">
-    <div class="stat reveal"><div class="n" data-k="accuracy">–</div><div class="l">Decision accuracy</div></div>
-    <div class="stat reveal"><div class="n" data-k="tickets">–</div><div class="l">Eval tickets</div></div>
-    <div class="stat reveal"><div class="n" data-k="abuse">–</div><div class="l">Abuse cases caught</div></div>
-    <div class="stat reveal"><div class="n" data-k="unsafe">–</div><div class="l">Unsafe auto-refunds</div></div>
+    <div class="stat reveal"><div class="n grad" data-k="accuracy">–</div><div class="l">Decision accuracy (<span id="i_tickets">–</span> tickets)</div></div>
+    <div class="stat reveal"><div class="n grad" data-k="unsafe">–</div><div class="l">Unsafe refunds</div></div>
+    <div class="stat reveal"><div class="n grad" id="i_speed">–</div><div class="l">Faster than a human</div></div>
+    <div class="stat reveal"><div class="n grad" id="i_block">–</div><div class="l">Abuse blocked</div></div>
   </div>
-</div></section>
-
-<section style="padding-top:0" data-roles="guest staff"><div class="wrap">
-  <div class="h2 reveal">What it's worth.</div>
-  <p class="lead reveal">Business impact, measured on the same evaluation run. Manual baseline assumed at 8 minutes per ticket.</p>
-  <div class="stats" id="impact">
-    <div class="stat reveal"><div class="n grad" id="i_speed">–</div><div class="l">Faster than a human agent (<span id="i_secs">–</span>s per ticket)</div></div>
-    <div class="stat reveal"><div class="n grad" id="i_block">–</div><div class="l">Abuse and duplicate refunds blocked</div></div>
-    <div class="stat reveal"><div class="n grad" id="i_auto">–</div><div class="l">Resolved with no human needed</div></div>
-    <div class="stat reveal"><div class="n grad" id="i_fp">–</div><div class="l">Genuine customers wrongly blocked</div></div>
-  </div>
-  <p class="reveal" style="color:var(--muted);font-size:14px;margin-top:18px">Refund amounts correct: <b id="i_amt">–</b> · Escalations correct: <b id="i_esc">–</b> · Hours saved per 1,000 tickets: <b id="i_hours">–</b></p>
 </div></section>
 
 <section class="dark" id="how" data-roles="guest"><div class="wrap">
@@ -431,9 +419,9 @@ footer{padding:50px 0;color:var(--muted);font-size:13px;text-align:center}
 
 <section class="dark" id="results" data-roles="guest staff"><div class="wrap">
   <div class="h2 reveal">Results by category.</div>
-  <p class="lead reveal">Every labelled test ticket: what we expected, and what the agent decided.</p>
   <div class="bars" id="bars"></div>
-  <div class="tablewrap"><table id="etable"></table></div>
+  <details style="margin-top:28px"><summary style="cursor:pointer;color:#2997ff;font-size:15px">See all 18 test tickets</summary>
+    <div class="tablewrap"><table id="etable" style="margin-top:16px"></table></div></details>
 </div></section>
 
 <footer>RefundIQ · National Level Agentic AI Hackathon 2026 · Problem 16</footer>
@@ -667,15 +655,9 @@ async function loadEval(){
   const s=d.summary;
   const statObs = new IntersectionObserver(es=>{ if(!es[0].isIntersecting) return; statObs.disconnect();
     countUp(document.querySelector('[data-k="accuracy"]'),Math.round(s.accuracy*100),"%");
-    countUp(document.querySelector('[data-k="tickets"]'),s.tickets);
-    document.querySelector('[data-k="abuse"]').textContent=s.abuse_caught;
+    $("#i_tickets").textContent = s.tickets;
     countUp(document.querySelector('[data-k="unsafe"]'),s.unsafe_auto_refunds);
-    if (s.speedup_x!==undefined){
-      countUp($("#i_speed"),s.speedup_x,"×"); $("#i_secs").textContent=s.avg_seconds_per_ticket;
-      $("#i_block").textContent=inr(s.abuse_blocked_inr); countUp($("#i_auto"),s.resolved_without_human_pct,"%");
-      $("#i_fp").textContent=s.false_positives_on_legit; $("#i_amt").textContent=s.refund_amount_accuracy;
-      $("#i_esc").textContent=s.escalation_accuracy; $("#i_hours").textContent=s.hours_saved_per_1000_tickets;
-    }
+    if (s.speedup_x!==undefined){ countUp($("#i_speed"),s.speedup_x,"×"); $("#i_block").textContent="\u20B9"+Number(s.abuse_blocked_inr||0).toLocaleString("en-IN"); }
   },{threshold:.4}); statObs.observe($("#stats"));
   $("#bars").innerHTML = Object.entries(s.by_category).map(([c,v])=>{const [a,b]=v.split("/").map(Number);
     return `<div class="bar reveal"><span>${esc(c)}</span><div class="track"><div class="fill" data-w="${b?a/b*100:0}"></div></div><span>${v}</span></div>`}).join("");
